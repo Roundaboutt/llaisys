@@ -164,27 +164,77 @@ void Tensor::debug() const {
 }
 
 bool Tensor::isContiguous() const {
-    TO_BE_IMPLEMENTED();
+    const int size = _meta.strides.size();
+    for (int i = 0; i < size - 1; i++)
+    {
+        if (_meta.strides[i] != _meta.strides[i + 1] * (long)_meta.shape[i + 1])
+        {
+            return false;
+        }
+    }
     return true;
 }
 
 tensor_t Tensor::permute(const std::vector<size_t> &order) const {
-    TO_BE_IMPLEMENTED();
-    return std::shared_ptr<Tensor>(new Tensor(_meta, _storage));
+    if (order.size() != _meta.shape.size()) return nullptr;
+
+    TensorMeta new_meta = _meta;
+
+    for (size_t i = 0; i < order.size(); i++)
+    {
+        new_meta.shape[i] = _meta.shape[order[i]];
+        new_meta.strides[i] = _meta.strides[order[i]];
+    }
+
+    return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, _offset));
 }
 
 tensor_t Tensor::view(const std::vector<size_t> &shape) const {
-    TO_BE_IMPLEMENTED();
-    return std::shared_ptr<Tensor>(new Tensor(_meta, _storage));
+    size_t total_elem = 1;
+    for (auto x : shape)
+    {
+        total_elem *= x;
+    }
+
+    if (total_elem != this->numel() || !isContiguous()) return nullptr;
+
+    TensorMeta new_meta;
+    new_meta.dtype = _meta.dtype;
+    new_meta.shape = shape;
+    new_meta.strides.resize(shape.size());
+
+
+    for (size_t i = 0; i < shape.size(); i++)
+    {
+        total_elem /= shape[i];
+        new_meta.strides[i] = total_elem;
+    }
+
+    return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, _offset));
 }
 
 tensor_t Tensor::slice(size_t dim, size_t start, size_t end) const {
-    TO_BE_IMPLEMENTED();
-    return std::shared_ptr<Tensor>(new Tensor(_meta, _storage));
+    
+    if (dim >= _meta.shape.size() || start >= end || end > _meta.shape[dim]) return nullptr;
+
+    TensorMeta new_meta = _meta;
+    size_t new_offset = _offset + (start * _meta.strides[dim] * elementSize());
+    new_meta.shape[dim] = end - start;
+    
+    return std::shared_ptr<Tensor>(new Tensor(new_meta, _storage, new_offset));
 }
 
 void Tensor::load(const void *src_) {
-    TO_BE_IMPLEMENTED();
+
+    if (src_ == nullptr) return;
+    size_t total_bytes = this->numel() * this->elementSize();
+    void *dst = this->data();
+
+    if (this->deviceType() == LLAISYS_DEVICE_CPU)
+    {
+        std::memcpy(dst, src_, total_bytes);
+    }
+    
 }
 
 tensor_t Tensor::contiguous() const {

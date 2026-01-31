@@ -50,6 +50,7 @@ venv/
 ENV/
 *.env
 *.venv
+*.envrc
 
 # PyInstaller
 *.manifest
@@ -88,3 +89,6 @@ htmlcov/
 Thumbs.db
 ehthumbs.db
 desktop.ini
+
+# 模型文件
+model/
